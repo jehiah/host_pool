@@ -25,8 +25,9 @@ class HostPool(object):
     @parameter <int> retry_interval - seconds between retries. set to -1 for doubling retry intervals (ie: 1, 2, 4, 8, ...)
     @parameter <int> max_retry_interval - the maximum seconds to wait between retries
     @parameter <bool> reset_on_all_failed - reset all hosts to alive when all are marked as failed.
+    @parameter <int> initial_retry_delay - seconds to delay after initial host failure. default: 30
     """
-    def __init__(self, hosts, retry_failed_hosts=-1, retry_interval=-1, max_retry_interval=900, reset_on_all_failed=True, debug=True):
+    def __init__(self, hosts, retry_failed_hosts=-1, retry_interval=-1, max_retry_interval=900, reset_on_all_failed=True, debug=True, initial_retry_delay=30):
         assert isinstance(hosts, (list, tuple))
         assert hosts, "You must provide atleast one host"
         assert isinstance(retry_failed_hosts, int)
@@ -34,15 +35,17 @@ class HostPool(object):
         assert isinstance(max_retry_interval, int)
         assert isinstance(reset_on_all_failed, bool)
         assert isinstance(debug, bool)
+        assert isinstance(initial_retry_delay, int)
         
         self.hosts=hosts
         self.host_count = len(hosts)
         self.next_host = 0
-        self.status = dict([[host, dict(next_retry=0, retry_count=0, retry_delay=1, dead=False, host=host)] for host in hosts])
+        self.status = dict([[host, dict(next_retry=0, retry_count=0, retry_delay=initial_retry_delay, dead=False, host=host)] for host in hosts])
         self.retry_failed_hosts = retry_failed_hosts
         self.retry_interval = retry_interval
         self.max_retry_interval = max_retry_interval
         self.reset_on_all_failed = reset_on_all_failed
+        self.initial_retry_delay = initial_retry_delay
         self.debug = debug
     
     def reset(self):
@@ -107,7 +110,7 @@ class HostPool(object):
             status['dead'] = True
             status['retry_count'] = 0
             if self.retry_interval == -1:
-                status['retry_delay'] = 1
+                status['retry_delay'] = self.initial_retry_delay
             else:
                 status['retry_delay'] = 0
             status['next_retry'] = time.time() + status['retry_delay']
