@@ -1,7 +1,7 @@
 from distutils.core import setup
 
-# also update in urlnorm.py
-version = '0.1'
+# also update in host_pool.py
+version = '0.2'
 
 setup(name='host_pool',
         version=version,
