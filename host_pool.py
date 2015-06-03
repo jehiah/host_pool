@@ -9,16 +9,19 @@ import time
 
 __version__ = "0.2"
 
+
 class Error(Exception):
     pass
+
 
 class NoHostsAvailable(Error):
     pass
 
+
 class HostPool(object):
     """
     A generic interface to track a list of remote hosts
-    and call .success(host) and .failed(host) to allow 
+    and call .success(host) and .failure(host) to allow
     auto-backoff from a failed remote host.
     
     @parameter <int> retry_failed_hosts - the number of times to retry a failed host. set to -1 for indefinite retries
@@ -37,7 +40,7 @@ class HostPool(object):
         assert isinstance(debug, bool)
         assert isinstance(initial_retry_delay, int)
         
-        self.hosts=hosts
+        self.hosts = hosts
         self.host_count = len(hosts)
         self.next_host = 0
         self.status = dict([[host, dict(next_retry=0, retry_count=0, retry_delay=initial_retry_delay, dead=False, host=host)] for host in hosts])
@@ -72,13 +75,13 @@ class HostPool(object):
                     continue
                 # is it at a retry stage
                 # increment the counters for when we can retry this host next
-                # this will be cleared if this try is successfull. subsequeent calls 
-                # for failed(host) will do nothing
+                # this will be cleared if this try is successfull. subsequeent calls
+                # for failure(host) will do nothing
                 if status['next_retry'] < time.time():
                     if self.debug:
                         logging.info('host %s in failed state (after %d tries). retrying' % (host, status['retry_count']))
                     status['retry_count'] += 1
-                    if self.retry_interval == -1 :
+                    if self.retry_interval == -1:
                         status['retry_delay'] = min(status['retry_delay'] * 2, self.max_retry_interval)
                     else:
                         status['retry_delay'] = self.retry_interval
@@ -97,13 +100,18 @@ class HostPool(object):
             raise NoHostsAvailable()
     
     def success(self, host):
-        """mark that a host had a successful connection/request"""
+        """mark that the connection/request to a host was a success"""
         assert host in self.hosts
         status = self.status[host]
         status['dead'] = False
-    
+  
+    # Deprecated, use HostPool.failure instead
     def failed(self, host):
-        """mark that a host had a failed connection/request"""
+        """(deprecated) mark that the connection/request to a host was a failure"""
+        return self.failure(host)
+
+    def failure(self, host):
+        """mark that the connection/request to a host was a failure"""
         assert host in self.hosts
         status = self.status[host]
         if not status['dead']:
